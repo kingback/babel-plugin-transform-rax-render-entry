@@ -38,11 +38,6 @@ function extendsRaxComponent(node) {
 module.exports = function(babel, options = {}) {
   const { types } = babel;
   const { include } = options;
-  let hasRaxRenderImported = false;
-  let hasRaxCreateElementImported = false;
-  let exportedAppName = '';
-  let importedRax = null;
-  let ignoreFile = false;
 
   function hasRenderApp(path) {
     let ret = false;
@@ -61,19 +56,19 @@ module.exports = function(babel, options = {}) {
     return ret;
   }
 
-  function addRenderApp(path, exportedAppName) {
+  function addRenderApp(path) {
     // import rax
-    if (importedRax) {
+    if (path.importedRax) {
       // import {Component} from 'rax';
       // import {Component, createElement, render} from 'rax';
-      if (!hasRaxCreateElementImported) {
-        importedRax.node.specifiers.push(types.importSpecifier(
+      if (!path.hasRaxCreateElementImported) {
+        path.importedRax.node.specifiers.push(types.importSpecifier(
           types.identifier('createElement'),
           types.identifier('createElement')
         ));
       }
-      if (!hasRaxRenderImported) {
-        importedRax.node.specifiers.push(types.importSpecifier(
+      if (!path.hasRaxRenderImported) {
+        path.importedRax.node.specifiers.push(types.importSpecifier(
           types.identifier('render'),
           types.identifier('render')
         ));
@@ -104,7 +99,7 @@ module.exports = function(babel, options = {}) {
         [
           types.callExpression(
             types.identifier('createElement'),
-            [types.identifier(exportedAppName)]
+            [types.identifier(path.exportedAppName)]
           ),
           types.nullLiteral(),
           types.objectExpression([
@@ -122,45 +117,50 @@ module.exports = function(babel, options = {}) {
     visitor: {
       Program: {
         enter(path, state) {
-          ignoreFile = false;
-          exportedAppName = '';
+          path.hasRaxCreateElementImported = false;
+          path.hasRaxRenderImported = false;
+          path.exportedAppName = '';
+          path.importedRax = null;
+          path.ignoreFile = false;
           if (!isIncluded(
             include || (state.opts && state.opts.include),
             this.file.opts.filename
-          )) ignoreFile = true;
+          )) path.ignoreFile = true;
         },
         exit(path) {
-          if (ignoreFile || !exportedAppName || hasRenderApp(path)) return;
-          addRenderApp(path, exportedAppName);
+          if (path.ignoreFile || !path.exportedAppName || hasRenderApp(path)) return;
+          addRenderApp(path);
         }
       },
       ImportDeclaration(path) {
         const { node } = path;
+        const rootPath = path.findParent(p => p.isProgram());
         if (node.source.value === 'rax') {
           node.specifiers.forEach(function(s) {
             if (s.imported) {
               if (s.imported.name === 'render') {
-                hasRaxRenderImported = true;
+                rootPath.hasRaxRenderImported = true;
               }
               if (s.imported.name === 'createElement') {
-                hasRaxCreateElementImported = true;
+                rootPath.hasRaxCreateElementImported = true;
               }
             }
           });
-          importedRax = path;
+          rootPath.importedRax = path;
         }
       },
       ExportDefaultDeclaration(path) {
         const node = path.node;
+        const rootPath = path.findParent(p => p.isProgram());
         let declaration = node.declaration;
         if (
-          !ignoreFile && (
+          !rootPath.ignoreFile && (
             types.isFunctionDeclaration(declaration) || // export default function App() {}
             types.isIdentifier(declaration) || // export default App;
             (types.isClassDeclaration(declaration) && extendsRaxComponent(declaration)) // export default class App extends Component/Rax.Component {}
           )
         ) {
-          exportedAppName = declaration.name || declaration.id.name;
+          rootPath.exportedAppName = declaration.name || declaration.id.name;
         }
       }
     }
