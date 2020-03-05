@@ -37,7 +37,7 @@ function extendsRaxComponent(node) {
 
 module.exports = function(babel, options = {}) {
   const { types } = babel;
-  const { include } = options;
+  const { include, root = '#root' } = options;
 
   function hasRenderApp(path) {
     let ret = false;
@@ -89,10 +89,64 @@ module.exports = function(babel, options = {}) {
 
     // import driver
     path.node.body.unshift(types.importDeclaration([
-      types.importDefaultSpecifier(types.identifier('Driver'))
+      types.importDefaultSpecifier(types.identifier('__driver'))
     ], types.stringLiteral('driver-universal')));
 
-    // render(createElement(App), null, { driver: Driver });
+    // const __root = document.querySelector && document.querySelector('#root') || null;
+    // const __hydrate = __root && __root.hasAttribute('data-hydrate') || false;
+    // render(createElement(App), __root, {
+    //   driver: __driver,
+    //   hydrate: __hydrate
+    // });
+    path.node.body.push(types.variableDeclaration(
+      'const',
+      [
+        types.variableDeclarator(
+          types.identifier('__root'),
+          types.logicalExpression(
+            '||',
+            types.logicalExpression(
+              '&&',
+              types.memberExpression(
+                types.identifier('document'),
+                types.identifier('querySelector')
+              ),
+              types.callExpression(
+                types.memberExpression(
+                  types.identifier('document'),
+                  types.identifier('querySelector')
+                ),
+                [types.stringLiteral(root)]
+              )
+            ),
+            types.nullLiteral()
+          )
+        )
+      ]
+    ));
+    path.node.body.push(types.variableDeclaration(
+      'const',
+      [
+        types.variableDeclarator(
+          types.identifier('__hydrate'),
+          types.logicalExpression(
+            '||',
+            types.logicalExpression(
+              '&&',
+              types.identifier('__root'),
+              types.callExpression(
+                types.memberExpression(
+                  types.identifier('__root'),
+                  types.identifier('hasAttribute')
+                ),
+                [types.stringLiteral('data-hydrate')]
+              )
+            ),
+            types.booleanLiteral(false)
+          )
+        )
+      ]
+    ));
     path.node.body.push(types.expressionStatement(
       types.callExpression(
         types.identifier('render'),
@@ -101,11 +155,15 @@ module.exports = function(babel, options = {}) {
             types.identifier('createElement'),
             [types.identifier(path.exportedAppName)]
           ),
-          types.nullLiteral(),
+          types.identifier('__root'),
           types.objectExpression([
             types.objectProperty(
               types.identifier('driver'),
-              types.identifier('Driver')
+              types.identifier('__driver')
+            ),
+            types.objectProperty(
+              types.identifier('hydrate'),
+              types.identifier('__hydrate')
             )
           ])
         ]

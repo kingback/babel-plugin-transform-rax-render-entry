@@ -13,9 +13,11 @@ export default function App() {}
 
 ```js
 import { createElement, render } from "rax";
-import Driver from "driver-universal";
+import __driver from "driver-universal";
 export default function App() {}
-render(createElement(App), null, { driver: Driver });
+const __root = document.querySelector && document.querySelector('#root') || null;
+const __hydrate = __root && __root.hasAttribute('data-hydrate') || false;
+render(createElement(App), __root, { driver: __driver, hydrate: __hydrate });
 ```
 
 ## Installation
@@ -34,7 +36,8 @@ $ npm install babel-plugin-transform-rax-render-entry
 {
   "plugins": [
     ["transform-rax-render-entry", {
-      "include": /my-entry\.js/
+      "include": /my-entry\.js/,
+      "root": "#root" // default #root
     }]
   ]
 }
