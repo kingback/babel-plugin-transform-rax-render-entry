@@ -92,14 +92,14 @@ module.exports = function(babel, options = {}) {
       types.importDefaultSpecifier(types.identifier('__driver'))
     ], types.stringLiteral('driver-universal')));
 
-    // const __root = document.querySelector && document.querySelector('#root') || null;
-    // const __hydrate = __root && __root.hasAttribute('data-hydrate') || false;
+    // var __root = document.querySelector && document.querySelector('#root') || null;
+    // var __hydrate = __root && __root.hasAttribute('data-hydrate') || false;
     // render(createElement(App), __root, {
     //   driver: __driver,
     //   hydrate: __hydrate
     // });
     path.node.body.push(types.variableDeclaration(
-      'const',
+      'var',
       [
         types.variableDeclarator(
           types.identifier('__root'),
@@ -125,7 +125,7 @@ module.exports = function(babel, options = {}) {
       ]
     ));
     path.node.body.push(types.variableDeclaration(
-      'const',
+      'var',
       [
         types.variableDeclarator(
           types.identifier('__hydrate'),

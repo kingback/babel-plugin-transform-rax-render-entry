@@ -1,6 +1,6 @@
 {
   "name": "babel-plugin-transform-rax-render-entry",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Auto render entry App of Rax",
   "author": "kingback <ningzbruc@gmail.com>",
   "main": "lib/index.js",
