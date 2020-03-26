@@ -37,7 +37,7 @@ function extendsRaxComponent(node) {
 
 module.exports = function(babel, options = {}) {
   const { types } = babel;
-  const { include, root = '#root' } = options;
+  const { hydrate = false, include, root = '#root' } = options;
 
   function hasRenderApp(path) {
     let ret = false;
@@ -96,7 +96,7 @@ module.exports = function(babel, options = {}) {
     // var __hydrate = __root && __root.hasAttribute('data-hydrate') || false;
     // render(createElement(App), __root, {
     //   driver: __driver,
-    //   hydrate: __hydrate
+    //   hydrate: false || __hydrate
     // });
     path.node.body.push(types.variableDeclaration(
       'var',
@@ -163,7 +163,11 @@ module.exports = function(babel, options = {}) {
             ),
             types.objectProperty(
               types.identifier('hydrate'),
-              types.identifier('__hydrate')
+              types.logicalExpression(
+                '||',
+                types.booleanLiteral(hydrate),
+                types.identifier('__hydrate')
+              )
             )
           ])
         ]
